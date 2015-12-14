@@ -14,18 +14,27 @@ class SurveysController extends AppController {
             'recursive' => 0,
             'fields' => array('*'),
         ));
-        if ($this->request->is('get')) {
-            $questions = $this->Question->find('all', array(
+        $questions = $this->Question->find('all', array(
+            'conditions' => array(
+                'Question.survey_id' => $survey['Survey']['id'],
+            ),
+            'recursive' => 1,
+            'fields' => array('*'),
+            'order' => array('Question.ordinal'),
+        ));
+        $this->set(compact('survey', 'questions'));
+        
+    }
+    
+    public function submit ($tag) {
+        if ($this->request->is('post')) {
+            $survey = $this->Survey->find('first', array(
                 'conditions' => array(
-                    'Question.survey_id' => $survey['Survey']['id'],
+                    'Survey.tag' => $tag,
                 ),
-                'recursive' => 1,
+                'recursive' => 0,
                 'fields' => array('*'),
-                'order' => array('Question.ordinal'),
             ));
-            $this->set(compact('survey', 'questions'));
-        }
-        else if ($this->request->is('post')) {
             $candidates = $this->Candidate->find('list', array(
                 'conditions' => array(
                     'Candidate.survey_id' => $survey['Survey']['id'],
@@ -36,6 +45,7 @@ class SurveysController extends AppController {
             foreach ($candidates as $id => $candidate) {
                 $scores[$id] = 0.0; 
             }
+            $totalImportance = 0.0;
             foreach ($this->data['Answer'] as $answer) {
                 $candidateAnswers = $this->CandidateAnswer->find('all', array(
                     'conditions' => array(
@@ -48,17 +58,20 @@ class SurveysController extends AppController {
                 foreach($candidateAnswers as $ca) {
                     $scores[$ca['CandidateAnswer']['candidate_id']] += $answer['importance'];
                 }
+                $totalImportance+= $answer['importance'];
             }
             $max = 0;
-            $maxId = 0;
+            $bestCandidateId = 0;
+            $percentages = array();
             foreach($scores as $id => $score) {
+                $percentages[$id] = round($score / $totalImportance * 100);
                 if ($score > $max) {
                     $max = $score;
-                    $maxId = $id;
+                    $bestCandidateId = $id;
                 }
             }
-            echo 'Your best Candidate is: '.$candidates[$maxId];
-            exit;
+            
+            $this->set(compact('percentages', 'candidates', 'bestCandidateId'));
         }
     }
 }
