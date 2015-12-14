@@ -56,6 +56,7 @@ class Question extends AppModel {
             'foreignKey' => 'question_id',
             'dependent' => true,
             'conditions' => '',
+            'order' => 'ordinal',
         ),
     );
 
